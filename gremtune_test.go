@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"strconv"
-	"strings"
 	"testing"
 	"time"
 )
@@ -14,12 +13,11 @@ func init() {
 	InitGremlinClients()
 }
 
-type BulkResponse struct {
-	Type  string `json:"type"`
-	Value []struct {
-		Type  string        `json:"type"`
-		Value []interface{} `json:"value"`
-	} `json:"value"`
+type BulkResponse []struct {
+	ID        string   `json:"id"`
+	Label     string   `json:"label"`
+	Source    []string `json:"source"`
+	Timestamp []string `json:"timestamp"`
 }
 
 func truncateData(t *testing.T) {
@@ -90,10 +88,6 @@ func seedBulkData(t *testing.T) {
 	log.Println("Seeding bulk data completed...")
 }
 
-type nodeLabels struct {
-	Label []string `json:"@value"`
-}
-
 func TestExecute(t *testing.T) {
 	seedData(t)
 	r, err := g.Execute(`g.V('1234').label()`)
@@ -101,14 +95,11 @@ func TestExecute(t *testing.T) {
 		t.Errorf("Unexpected error returned from server err: %v", err.Error())
 	} else {
 		t.Logf("Execute get vertex, response: %v \n err: %v", string(r[0].Result.Data), err)
-		nl := new(nodeLabels)
-		err = json.Unmarshal(r[0].Result.Data, &nl)
-		if len(nl.Label) != 1 {
-			t.Errorf("There should only be 1 node label, got: %v+", nl)
-		}
+		var value []string
+		err = json.Unmarshal(r[0].Result.Data, &value)
 		expected := "Phil"
-		got := nl.Label[0]
-		if nl.Label[0] != expected {
+		got := value[0]
+		if got != expected {
 			t.Errorf("Unexpected label returned,  expected: %s got: %s", expected, got)
 		}
 	}
@@ -123,12 +114,10 @@ func TestExecuteBulkData(t *testing.T) {
 	if err != nil {
 		t.Errorf("Unexpected error returned from server err: %v", err.Error())
 	} else {
-		nl := new(BulkResponse)
-		datastr := strings.Replace(string(r[0].Result.Data), "@type", "type", -1)
-		datastr = strings.Replace(datastr, "@value", "value", -1)
-		err = json.Unmarshal([]byte(datastr), &nl)
-		if len(nl.Value) != 64 {
-			t.Errorf("There should only be 64 value, got: %v+", len(nl.Value))
+		var nl []BulkResponse
+		err = json.Unmarshal(r[0].Result.Data, &nl)
+		if len(nl) != 64 {
+			t.Errorf("There should only be 64 value, got: %v+", len(nl))
 		}
 		if len(r) != 10 {
 			t.Errorf("There should only be 10 value, got: %v+", len(r))
@@ -151,12 +140,10 @@ func TestExecuteBulkDataAsync(t *testing.T) {
 		for asyncResponse = range responseChannel {
 			log.Println(fmt.Sprintf("Time it took to get async response: %s response status: %v (206 means partial and 200 final response)", time.Since(start), asyncResponse.Response.Status.Code))
 			count++
-			nl := new(BulkResponse)
-			datastr := strings.Replace(string(asyncResponse.Response.Result.Data), "@type", "type", -1)
-			datastr = strings.Replace(datastr, "@value", "value", -1)
-			err = json.Unmarshal([]byte(datastr), &nl)
-			if len(nl.Value) != 64 {
-				t.Errorf("There should only be 64 value, got: %v+", len(nl.Value))
+			var nl []BulkResponse
+			err = json.Unmarshal(asyncResponse.Response.Result.Data, &nl)
+			if len(nl) != 64 {
+				t.Errorf("There should only be 64 value, got: %v+", len(nl))
 			}
 			start = time.Now()
 		}
@@ -177,14 +164,11 @@ func TestExecuteWithBindings(t *testing.T) {
 		t.Errorf("Unexpected error returned from server err: %v", err.Error())
 	} else {
 		t.Logf("Execute with bindings get vertex, response: %s \n err: %s", string(r[0].Result.Data), err)
-		nl := new(nodeLabels)
-		err = json.Unmarshal(r[0].Result.Data, &nl)
-		if len(nl.Label) != 1 {
-			t.Errorf("There should only be 1 node label, got: %v+", nl)
-		}
+		var value []string
+		err = json.Unmarshal(r[0].Result.Data, &value)
 		expected := "Phil"
-		got := nl.Label[0]
-		if nl.Label[0] != expected {
+		got := value[0]
+		if got != expected {
 			t.Errorf("Unexpected label returned,  expected: %s got: %s", expected, got)
 		}
 	}
@@ -197,14 +181,11 @@ func TestExecuteFile(t *testing.T) {
 		t.Errorf("Unexpected error returned from server err: %v", err.Error())
 	} else {
 		t.Logf("ExecuteFile get vertex, response: %s \n err: %s", string(r[0].Result.Data), err)
-		nl := new(nodeLabels)
-		err = json.Unmarshal(r[0].Result.Data, &nl)
-		if len(nl.Label) != 1 {
-			t.Errorf("There should only be 1 node label, got: %v+", nl)
-		}
+		var value []string
+		err = json.Unmarshal(r[0].Result.Data, &value)
 		expected := "Vincent"
-		got := nl.Label[0]
-		if nl.Label[0] != expected {
+		got := value[0]
+		if got != expected {
 			t.Errorf("Unexpected label returned,  expected: %s got: %s", expected, got)
 		}
 	}
@@ -221,14 +202,11 @@ func TestExecuteFileWithBindings(t *testing.T) {
 		t.Errorf("Unexpected error returned from server err: %v", err.Error())
 	} else {
 		t.Logf("ExecuteFileWithBindings get vertex, response: %s \n err: %s", r[0].Result.Data, err)
-		nl := new(nodeLabels)
-		err = json.Unmarshal(r[0].Result.Data, &nl)
-		if len(nl.Label) != 1 {
-			t.Errorf("There should only be 1 node label, got: %v+", nl)
-		}
+		var value []string
+		err = json.Unmarshal(r[0].Result.Data, &value)
 		expected := "Vincent"
-		got := nl.Label[0]
-		if nl.Label[0] != expected {
+		got := value[0]
+		if got != expected {
 			t.Errorf("Unexpected label returned,  expected: %s got: %s", expected, got)
 		}
 	}
@@ -241,14 +219,11 @@ func TestPoolExecute(t *testing.T) {
 		t.Errorf("Unexpected error returned from server err: %v", err.Error())
 	} else {
 		t.Logf("PoolExecute get vertex, response: %s \n err: %s", r[0].Result.Data, err)
-		nl := new(nodeLabels)
-		err = json.Unmarshal(r[0].Result.Data, &nl)
-		if len(nl.Label) != 1 {
-			t.Errorf("There should only be 1 node label, got: %v+", nl)
-		}
+		var value []string
+		err = json.Unmarshal(r[0].Result.Data, &value)
 		expected := "Phil"
-		got := nl.Label[0]
-		if nl.Label[0] != expected {
+		got := value[0]
+		if got != expected {
 			t.Errorf("Unexpected label returned,  expected: %s got: %s", expected, got)
 		}
 	}
